@@ -12,7 +12,7 @@ module.exports = function(grunt) {
 
 	// Please see the Grunt documentation for more information regarding task
 	// creation: http://gruntjs.com/creating-tasks
-	var OSS = require('ali-oss'),
+	var OSS = require('ali-oss').Wrapper,
 		async = require('async'),
 		path = require('path'),
 		fs = require('fs'),
@@ -41,7 +41,7 @@ module.exports = function(grunt) {
 				accessKeySecret: options.accessKeySecret
 			};
 		//creat a new oss-client
-		var	oss = OSS(options),
+		var	oss = new OSS(options),
 			uploadQue = [];
 		// Iterate over all specified file groups.
 		this.files.forEach(function(f) {
@@ -91,10 +91,13 @@ module.exports = function(grunt) {
 					grunt.log.error(chalk.cyan(o.srcFile) + chalk.red(' 是目录, 忽略!'));
 					callback();
 				}else {
-					grunt.log.ok('开始上传文件'+ chalk.cyan(o.srcFile));
-					oss.put(o, function (error, result) {
-						callback(error, result);
-					});
+          var filepath = chalk.cyan(o.srcFile);
+					grunt.log.ok('开始上传文件'+ filepath);
+          oss.put(o.object,o.srcFile).then(function (val) {
+            callback('',val);
+          }).catch (function (err) {
+            callback(err,'');
+          });
 				}
 			}
 		}
