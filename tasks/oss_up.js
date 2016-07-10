@@ -12,18 +12,18 @@ module.exports = function(grunt) {
 
 	// Please see the Grunt documentation for more information regarding task
 	// creation: http://gruntjs.com/creating-tasks
-	var OSS = require('oss-client'),
+	var OSS = require('ali-oss'),
 		async = require('async'),
 		path = require('path'),
 		fs = require('fs'),
 		chalk = require('chalk');
-		
-	grunt.registerMultiTask('oss', 'A grunt tool for uploading static file to aliyun oss.', function() {
-		var done = this.async(); 
+
+	grunt.registerMultiTask('oss', '一个上传静态文件到阿里云OSS的GRUNT工具', function() {
+		var done = this.async();
 		// Merge task-specific and/or target-specific options with these defaults.
 		var options = this.options({
 			/**
-             * @name objectGen --return a aliyun oss object name 
+             * @name objectGen --return a aliyun oss object name
 			 *					  default return grunt task files' dest + files' name
              * @param dest  --grunt task files' dest
              * @param src  --grunt task files' src
@@ -32,16 +32,16 @@ module.exports = function(grunt) {
 				return [dest, path.basename(src)].join('\/');
 			}
 		});
-		
+
 		if(!options.accessKeyId || !options.accessKeySecret || !options.bucket){
-			grunt.fail.fatal('accessKeyId, accessKeySecret and bucket are all required!');
+			grunt.fail.fatal('accessKeyId, accessKeySecret 以及 bucket 必须填写!');
 		}
 		var option = {
 				accessKeyId: options.accessKeyId,
 				accessKeySecret: options.accessKeySecret
 			};
 		//creat a new oss-client
-		var	oss = new OSS.OssClient(option),
+		var	oss = OSS(options),
 			uploadQue = [];
 		// Iterate over all specified file groups.
 		this.files.forEach(function(f) {
@@ -49,7 +49,7 @@ module.exports = function(grunt) {
 			var objects = f.src.filter(function(filepath) {
 				// Warn on and remove invalid source files (if nonull was set).
 				if (!grunt.file.exists(filepath)) {
-					grunt.log.warn('Source file "' + filepath + '" not found.');
+					grunt.log.warn('源文件 "' + filepath + '" 未找到.');
 					return false;
 				} else {
 					return true;
@@ -64,19 +64,19 @@ module.exports = function(grunt) {
 
 			});
 			objects.forEach(function(o) {
-				uploadQue.push(o);	
-			});	
+				uploadQue.push(o);
+			});
 		});
 		var uploadTasks = [];
 		uploadQue.forEach(function(o) {
-			uploadTasks.push(makeUploadTask(o));	
+			uploadTasks.push(makeUploadTask(o));
 		});
-		grunt.log.ok('Start uploading files.')
+		grunt.log.ok('开始上传文件.')
 		async.series(uploadTasks, function(error, results) {
 			if (error) {
-				grunt.fail.fatal("uploadError:"+ JSON.stringify(error));
+				grunt.fail.fatal("上传错误:"+ JSON.stringify(error));
 			} else {
-				grunt.log.ok('All files has uploaded yet!');
+				grunt.log.ok('所有文件已经上传!');
 			}
 			done(error, results);
 		});
@@ -88,14 +88,14 @@ module.exports = function(grunt) {
 			return function(callback) {
 				//skip object when object's path is a directory;
 				if( fs.lstatSync(o.srcFile).isDirectory() ){
-					grunt.log.error(chalk.cyan(o.srcFile) + chalk.red(' is a directory, skip it!'));
+					grunt.log.error(chalk.cyan(o.srcFile) + chalk.red(' 是目录, 忽略!'));
 					callback();
 				}else {
-					grunt.log.ok('Start uploading file '+ chalk.cyan(o.srcFile));
-					oss.putObject(o, function (error, result) {
+					grunt.log.ok('开始上传文件'+ chalk.cyan(o.srcFile));
+					oss.put(o, function (error, result) {
 						callback(error, result);
 					});
-				}	
+				}
 			}
 		}
 	});
